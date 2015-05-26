@@ -444,9 +444,7 @@ public class Graph
 
         // Print the graph's name
         if(this.graphName != null)
-        {
             builder.append("\tlabel=\"").append(this.graphName).append("\";\n\n");
-        }
 
         // Print the list of nodes
         for(int nodeIndex : this.nodes)
@@ -454,9 +452,7 @@ public class Graph
             builder.append("\t").append(nodeIndex);
 
             if(this.nodeNames.get(nodeIndex) != null)
-            {
                 builder.append(" [label=\"").append(this.nodeNames.get(nodeIndex)).append("\"]");
-            }
 
             builder.append(";\n");
         }
@@ -469,12 +465,8 @@ public class Graph
             StringBuilder edgesBuilder = new StringBuilder();
 
             for(int nodeIndex2 : this.edges.get(nodeIndex1))
-            {
                 if(nodeIndex1 <= nodeIndex2)
-                {
                     edgesBuilder.append(nodeIndex2).append("; ");
-                }
-            }
 
             if(edgesBuilder.length() > 0)
             {
