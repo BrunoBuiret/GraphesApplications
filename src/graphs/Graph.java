@@ -1,5 +1,9 @@
 package graphs;
 
+import java.io.BufferedReader;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -29,6 +33,11 @@ public class Graph
      * Graph's edges list.
      */
     protected Map<Integer, Set<Integer>> edges;
+    
+    /**
+     * Graph's edges number.
+     */
+    protected long edgesNumber;
 
     /**
      * Nodes' name list.
@@ -55,6 +64,7 @@ public class Graph
         this.graphName = graphName;
         this.nodes = new HashSet<Integer>();
         this.edges = new HashMap<Integer, Set<Integer>>();
+        this.edgesNumber = 0;
         this.nodeNames = new HashMap<Integer, String>();
     }
 
@@ -150,6 +160,15 @@ public class Graph
     {
         return this.nodes.contains(nodeIndex);
     }
+    
+    /**
+     * 
+     * @return 
+     */
+    public int getNodesNumber()
+    {
+        return this.nodes.size();
+    }
 
     /**
      * Gets a node's name.
@@ -188,6 +207,15 @@ public class Graph
             throw new Exception("Node #" + nodeIndex + " doesn't exist.");
         }
     }
+    
+    /**
+     * 
+     * @return 
+     */
+    public Map<Integer, String> getNodeNames()
+    {
+        return this.nodeNames;
+    }
 
     /**
      * Adds an edge between two nodes of the graph.
@@ -209,6 +237,8 @@ public class Graph
                     this.edges.get(nodeIndex1).add(nodeIndex2);
                     // From node two to node one
                     this.edges.get(nodeIndex2).add(nodeIndex1);
+                    // Increase edges number
+                    this.edgesNumber++;
                 }
                 else
                 {
@@ -298,6 +328,15 @@ public class Graph
         }
     }
 
+    /**
+     * 
+     * @return 
+     */
+    public long getEdgesNumber()
+    {
+        return this.edgesNumber;
+    }
+    
     /**
      * Gets a node's degree.
      *
@@ -497,7 +536,94 @@ public class Graph
      */
     public static Graph load(String fileName)
     {
-        throw new UnsupportedOperationException("Method graphs.Graph.load(String) isn't implemented yet.");
+        try 
+        {
+            BufferedReader buffer = new BufferedReader(new FileReader(fileName));
+            Graph graph = new Graph();
+            String line;
+            int nodeIndex = 1;
+            
+            while((line = buffer.readLine()) != null)
+            {
+                graph.addNode(nodeIndex, line);
+                
+                for(Map.Entry<Integer, String> entry : graph.getNodeNames().entrySet())
+                {
+                    if(nodeIndex != entry.getKey())
+                    {
+                        if(Graph.levenshtein(line, entry.getValue()) == 1)
+                        {
+                            graph.addEdge(nodeIndex, entry.getKey());       
+                        }
+                    }
+                }
+                nodeIndex ++;
+            }
+            
+            return graph;
+        } 
+        catch (FileNotFoundException ex) 
+        {
+            Logger.getLogger(Graph.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        catch (IOException ex) 
+        {
+                Logger.getLogger(Graph.class.getName()).log(Level.SEVERE, null, ex);
+        } 
+        catch (Exception ex) 
+        {
+            Logger.getLogger(Graph.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        
+        return null;
+    }
+    
+    /**
+     * 
+     * @param s0
+     * @param s1
+     * @return 
+     * @see http://en.wikibooks.org/wiki/Algorithm_Implementation/Strings/Levenshtein_distance#Java
+     */
+    public static int levenshtein(String s0, String s1) 
+    {                          
+        int len0 = s0.length() + 1;                                                     
+        int len1 = s1.length() + 1;                                                     
+
+        // the array of distances                                                       
+        int[] cost = new int[len0];                                                     
+        int[] newcost = new int[len0];                                                  
+
+        // initial cost of skipping prefix in String s0                                 
+        for (int i = 0; i < len0; i++) cost[i] = i;                                     
+
+        // dynamically computing the array of distances                                  
+
+        // transformation cost for each letter in s1                                    
+        for (int j = 1; j < len1; j++) {                                                
+            // initial cost of skipping prefix in String s1                             
+            newcost[0] = j;                                                             
+
+            // transformation cost for each letter in s0                                
+            for(int i = 1; i < len0; i++) {                                             
+                // matching current letters in both strings                             
+                int match = (s0.charAt(i - 1) == s1.charAt(j - 1)) ? 0 : 1;             
+
+                // computing cost for each transformation                               
+                int cost_replace = cost[i - 1] + match;                                 
+                int cost_insert  = cost[i] + 1;                                         
+                int cost_delete  = newcost[i - 1] + 1;                                  
+
+                // keep minimum cost                                                    
+                newcost[i] = Math.min(Math.min(cost_insert, cost_delete), cost_replace);
+            }                                                                           
+
+            // swap cost/newcost arrays                                                 
+            int[] swap = cost; cost = newcost; newcost = swap;                          
+        }                                                                               
+
+        // the distance is the cost for transforming all letters in both strings        
+        return cost[len0 - 1];                                                          
     }
 
     /**
@@ -509,17 +635,11 @@ public class Graph
     {
         try
         {
-            Graph g = new Graph("Test de graphe");
-
-            g.addNode(0, "Noeud 0");
-            g.addNode(1);
-            g.addNode(2, "Noeud 2");
-
-            g.addEdge(0, 1);
-            g.addEdge(0, 2);
-            g.addEdge(1, 2);
-
-            System.out.println(g.getRepresentation());
+            Graph g = Graph.load("motsdelongueur6.txt");
+            System.out.println("Le nombre de sommets est de : " + g.getNodesNumber());
+            // Le nombre de sommets est de : 17035
+            System.out.println("Le nombre d'arêtes est de : " + g.getEdgesNumber());
+            // Le nombre d'arêtes est de : 39720
         }
         catch(Exception e)
         {
