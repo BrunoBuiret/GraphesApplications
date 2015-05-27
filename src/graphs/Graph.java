@@ -4,9 +4,11 @@ import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
@@ -159,6 +161,11 @@ public class Graph
     public boolean nodeExists(int nodeIndex)
     {
         return this.nodes.contains(nodeIndex);
+    }
+    
+    public Set<Integer> getNodes()
+    {
+        return this.nodes;
     }
     
     /**
@@ -363,44 +370,40 @@ public class Graph
      * @return
      * @throws java.lang.Exception Thrown if the start node doesn't exist.
      */
-    public Map<Integer, Integer> breadthFirstSearch(int startNodeIndex) throws Exception
+    public int breadthFirstSearch(int startNodeIndex, int componentNumber, List<Integer> remainingNodes) throws Exception
     {
         if(this.nodes.contains(startNodeIndex))
         {
             Queue<Integer> queue = new LinkedList<Integer>();
-            Map<Integer, Boolean> markedNodes = new HashMap<Integer, Boolean>();
-            Map<Integer, Integer> processOrder = new HashMap<Integer, Integer>();
-            int processNumber = 1;
 
             // Initialization
-            for(int nodeIndex : this.nodes)
-            {
-                markedNodes.put(nodeIndex, false);
-                processOrder.put(nodeIndex, 0);
-            }
-
-            markedNodes.put(startNodeIndex, true);
             queue.add(startNodeIndex);
 
             // Go through the graph
             while(!queue.isEmpty())
             {
                 int nodeIndex1 = queue.remove();
-
+                
                 for(int nodeIndex2 : this.edges.get(nodeIndex1))
                 {
-                    if(!markedNodes.get(nodeIndex2))
+                    if(remainingNodes.contains(nodeIndex2))
                     {
-                        markedNodes.put(nodeIndex2, true);
+                        remainingNodes.remove((Integer) nodeIndex2);
                         queue.add(nodeIndex2);
                     }
                 }
-
-                processOrder.put(nodeIndex1, processNumber);
-                processNumber++;
+                
+                remainingNodes.remove((Integer) nodeIndex1);
             }
 
-            return processOrder;
+            if(remainingNodes.size() > 0)
+            {
+                return this.breadthFirstSearch(remainingNodes.get(0), componentNumber + 1, remainingNodes);
+            }
+            else
+            {
+                return componentNumber;
+            }
         }
         else
         {
@@ -465,11 +468,154 @@ public class Graph
      *
      * @param startNodeIndex Start node's index.
      */
-    public void dijkstra(int startNodeIndex)
+    public LinkedList<Integer> dijkstra(String from, String to) throws Exception
     {
-        throw new UnsupportedOperationException("Method graphs.Graph.depthFirstSearch(int) isn't implemented yet.");
+        if(this.nodeNames.containsValue(from))
+        {
+            if(this.nodeNames.containsValue(to))
+            {
+                int fromIndex = 0, toIndex = 0;
+                boolean fromFound = false, toFound = false;
+                
+                for(Map.Entry<Integer, String> entry : this.nodeNames.entrySet())
+                {
+                    if(entry.getValue().equals(from))
+                    {
+                        fromIndex = entry.getKey();
+                        fromFound = true;
+                    }
+                    if(entry.getValue().equals(to))
+                    {
+                        toIndex = entry.getKey();
+                        toFound = true;
+                    }
+                    
+                    if(fromFound && toFound)
+                    {
+                        break;
+                    }
+                }
+                
+                // Dijkstra
+                Map<Integer, Integer> distances = new HashMap<Integer, Integer>();
+                Map<Integer, Integer> parents = new HashMap<Integer, Integer>();
+                List<Integer> list = new ArrayList<Integer>(this.nodes);
+                
+                list.remove(fromIndex);
+                distances.put(fromIndex, 0);
+                parents.put(fromIndex, 0);
+                
+                for(int nodeIndex : list)
+                {
+                    if(this.edgeExists(fromIndex, nodeIndex))
+                    {
+                        distances.put(nodeIndex, 1);
+                        parents.put(nodeIndex, fromIndex);
+                    }
+                    else
+                    {
+                        distances.put(nodeIndex, Integer.MAX_VALUE);
+                    }
+                }
+                
+                while(!list.isEmpty())
+                {
+                    int min = Integer.MAX_VALUE;
+                    int minIndex = 0;
+                    
+                    for(int nodeIndex : list)
+                    {
+                        if(distances.get(nodeIndex) < min)
+                        {
+                            min = distances.get(nodeIndex);
+                            minIndex = nodeIndex;
+                        }
+                    }
+                    
+                    list.remove(list.indexOf(minIndex));
+                    /*
+                    int listIndex = 0;
+                    
+                    for(int i = 0; i < list.size(); i++)
+                    {
+                        if(distances.get(list.get(i)) < distances.get(list.get(listIndex)))
+                        {
+                            listIndex = i;
+                        }
+                    }
+                    
+                    int minIndex = list.get(listIndex);
+                    list.remove(listIndex);
+                    */
+                    
+                    for(int neighbourIndex : this.edges.get(minIndex))
+                    {
+                        if(list.contains(neighbourIndex) && distances.get(minIndex) + 1 < distances.get(neighbourIndex))
+                        {
+                            distances.put(neighbourIndex, distances.get(minIndex) + 1);
+                            parents.put(neighbourIndex, minIndex);
+                        }
+                    }
+                }
+                
+                LinkedList<Integer> chain = new LinkedList<Integer>();
+                chain.add(toIndex);
+                
+                int nodeIndex = parents.get(toIndex);
+                
+                while(nodeIndex != 0)
+                {
+                    System.out.println("Parent : " + nodeIndex);
+                    chain.addFirst(nodeIndex);
+                    nodeIndex = parents.get(nodeIndex);
+                }
+                
+                return chain;
+            }
+            else
+            {
+                throw new Exception("No node called " + to);
+            }
+        }
+        else
+        {
+            throw new Exception("No node called " + from);
+        }
     }
-
+    
+    public List<Integer> getNeighbourlessNodes()
+    {
+        List<Integer> neighbourlessNodes = new ArrayList<Integer>();
+        
+        for(Map.Entry<Integer, Set<Integer>> entry : this.edges.entrySet())
+        {
+            if(entry.getValue().size() == 0)
+            {
+                neighbourlessNodes.add(entry.getKey());
+            }
+        }
+        return neighbourlessNodes;
+    }
+    
+    public Map<Integer, Integer> getNeighboursNumber()
+    {
+        Map<Integer, Integer> neighboursNumber = new HashMap<Integer, Integer>();
+        
+        for(Map.Entry<Integer, Set<Integer>> entry : this.edges.entrySet())
+        {
+            if(neighboursNumber.containsKey(entry.getValue().size()))
+            {
+                neighboursNumber.put(entry.getValue().size(), neighboursNumber.get(entry.getValue().size()) + 1);
+            }
+            else
+            {
+                neighboursNumber.put(entry.getValue().size(), 1);
+            }
+        }  
+            
+        return neighboursNumber;
+    }
+    
     /**
      * Gets a string representation of the graph that can be used with GraphViz.
      *
@@ -640,6 +786,55 @@ public class Graph
             // Le nombre de sommets est de : 17035
             System.out.println("Le nombre d'arêtes est de : " + g.getEdgesNumber());
             // Le nombre d'arêtes est de : 39720
+            System.out.println("Le nombre de composantes connexes est de : " + g.breadthFirstSearch(1, 1, new ArrayList<Integer>(g.getNodes())));
+            // Le nombre de composantes connexes est de : 2537
+            System.out.println("Le nombre de sommets sans voisins est de : " + g.getNeighbourlessNodes().size());
+            // Le nombre de sommets sans voisins est de : 1914
+            
+            int neighboursNumberMax = 0;
+            for(Map.Entry<Integer, Integer> entry : g.getNeighboursNumber().entrySet())
+            {
+                System.out.println("Le nombre de sommets avec " + entry.getKey() +" voisin" + (entry.getKey() > 1 ? "s" : "") + " est de : " + entry.getValue());
+                if(entry.getKey() > neighboursNumberMax)
+                {
+                    neighboursNumberMax = entry.getKey();
+                }
+            }
+            /*
+            Le nombre de sommets avec 0 voisin est de : 1914
+            Le nombre de sommets avec 1 voisin est de : 2044
+            Le nombre de sommets avec 2 voisins est de : 2061
+            Le nombre de sommets avec 3 voisins est de : 1886
+            Le nombre de sommets avec 4 voisins est de : 1703
+            Le nombre de sommets avec 5 voisins est de : 1494
+            Le nombre de sommets avec 6 voisins est de : 1261
+            Le nombre de sommets avec 7 voisins est de : 1093
+            Le nombre de sommets avec 8 voisins est de : 834
+            Le nombre de sommets avec 9 voisins est de : 677
+            Le nombre de sommets avec 10 voisins est de : 564
+            Le nombre de sommets avec 11 voisins est de : 457
+            Le nombre de sommets avec 12 voisins est de : 324
+            Le nombre de sommets avec 13 voisins est de : 223
+            Le nombre de sommets avec 14 voisins est de : 173
+            Le nombre de sommets avec 15 voisins est de : 106
+            Le nombre de sommets avec 16 voisins est de : 82
+            Le nombre de sommets avec 17 voisins est de : 49
+            Le nombre de sommets avec 18 voisins est de : 38
+            Le nombre de sommets avec 19 voisins est de : 19
+            Le nombre de sommets avec 20 voisins est de : 18
+            Le nombre de sommets avec 21 voisins est de : 6
+            Le nombre de sommets avec 22 voisins est de : 6
+            Le nombre de sommets avec 23 voisins est de : 1
+            Le nombre de sommets avec 27 voisins est de : 1
+            Le nombre de sommets avec 28 voisins est de : 1
+            */
+            
+            System.out.println("Le nombre maximum de voisins est de : " + neighboursNumberMax);
+            // Le nombre maximum de voisins est de : 28
+            
+            // Nous étions en train de faire Dijkstra mais nous avons un bug : un noeud x a
+            // pour parent le noeud y qui a lui-même pour parent x et nous n'avons pas
+            // eu le temps de résoudre le problème.
         }
         catch(Exception e)
         {
